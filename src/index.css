@@ -1,0 +1,202 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg: #0B0F1E;
+    --sf: #141A33;
+    --sf2: #1B2347;
+    --bd: rgba(255, 255, 255, 0.1);
+    --tx: #EEF1FF;
+    --mu: #9AA2C7;
+    --br: #7C5CFF;
+    --rw: #FF6B9D;
+    --en: #4DA3FF;
+    --ar: #2DD4A0;
+    --de: #FFB04D;
+    --dg: #FF6B6B;
+    --nd: rgba(20, 26, 51, 0.94);
+    --gl: rgba(20, 26, 51, 0.75);
+    --e: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  [data-theme="light"] {
+    --bg: #F6F5FF;
+    --sf: #FFFFFF;
+    --sf2: #EEF0FF;
+    --bd: #E2E4F5;
+    --tx: #1B1740;
+    --mu: #5B6190;
+    --br: #6A48F0;
+    --rw: #D63A78;
+    --en: #1D6FD0;
+    --ar: #0B8A66;
+    --de: #A85A00;
+    --dg: #E03131;
+    --nd: rgba(255, 255, 255, 0.97);
+    --gl: rgba(255, 255, 255, 0.85);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+    background-color: var(--bg);
+    color: var(--tx);
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    user-select: none;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+}
+
+/* Typography Overrides */
+.font-metric {
+  font-family: 'Space Grotesk', monospace, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+[lang="ar"], .arx, .font-arabic {
+  font-family: 'IBM Plex Sans Arabic', 'Noto Naskh Arabic', system-ui, sans-serif;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  line-height: 1.65;
+}
+
+/* Language themes */
+.l-en { --c: var(--en); }
+.l-ar { --c: var(--ar); }
+.l-de { --c: var(--de); }
+
+/* Badge & Tag */
+.bdg {
+  font-family: 'Space Grotesk', monospace, sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  line-height: 1.5;
+  padding: 1px 8px;
+  border-radius: 9999px;
+  color: var(--c);
+  background: color-mix(in srgb, var(--c) 14%, transparent);
+  letter-spacing: 0.04em;
+}
+
+kbd {
+  font-family: 'Space Grotesk', monospace, sans-serif;
+  font-weight: 600;
+  font-size: 11px;
+  background: color-mix(in srgb, var(--tx) 12%, transparent);
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+/* Canvas background */
+.canvas-bg {
+  background-color: var(--bg);
+  background-image: radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--mu) 35%, transparent) 1px, transparent 1.5px);
+  background-size: 32px 32px;
+}
+
+/* Animations */
+@keyframes bl {
+  from { opacity: 0; transform: scale(0.6); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes gw {
+  0%, 60% { box-shadow: 0 0 28px 4px color-mix(in srgb, var(--c) 65%, transparent); }
+  100% { box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.4); }
+}
+
+@keyframes dr {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes fl {
+  0% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+@keyframes tg {
+  0% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes ob {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.25); opacity: 0.7; }
+}
+
+.anim-bl {
+  animation: bl 0.35s var(--e) both;
+}
+
+.anim-pop {
+  animation: bl 0.5s var(--e) both, gw 2s ease-out;
+}
+
+.anim-draw {
+  stroke-dasharray: 1;
+  animation: dr 0.7s var(--e) 0.2s both;
+}
+
+.anim-flash {
+  animation: fl 0.6s var(--e);
+}
+
+.anim-orb {
+  animation: ob 1.4s ease-in-out infinite;
+}
+
+.anim-tag {
+  animation: tg 2.4s forwards;
+}
+
+/* 3D Flip Card */
+.flip-card {
+  perspective: 1000px;
+}
+
+.flip-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.5s var(--e);
+  transform-style: preserve-3d;
+}
+
+.flip-card.flipped .flip-card-inner {
+  transform: rotateY(180deg);
+}
+
+.flip-card-front, .flip-card-back {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border-radius: 24px;
+}
+
+.flip-card-back {
+  transform: rotateY(180deg);
+}
+
+/* Scrollbar customization */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--mu) 25%, transparent);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--mu) 45%, transparent);
+}

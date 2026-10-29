@@ -1,0 +1,6 @@
+{
+  "name": "MindLex - Cosmic Language Workspace",
+  "description": "Multilingual constellation mind map, AI note synthesizer, and spaced repetition study workspace for language learners.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
