@@ -1,5 +1,5 @@
 import { Node, Edge } from '@xyflow/react';
-import { NodeKind, LanguageCode, VocabRows, Flashcard } from '../../shared';
+import { NodeKind, LanguageCode, VocabRows, Flashcard, Block } from '../../shared';
 
 export interface MindLexNodeData extends Record<string, unknown> {
   id: string;
@@ -9,6 +9,7 @@ export interface MindLexNodeData extends Record<string, unknown> {
   lang: LanguageCode;
   summary?: string;
   content?: string;
+  blocks?: Block[];
   rows?: VocabRows;
   flashcards?: Flashcard[];
   tags?: string[];

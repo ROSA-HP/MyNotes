@@ -23,6 +23,45 @@ export const FlashcardSchema = z.object({
 });
 export type Flashcard = z.infer<typeof FlashcardSchema>;
 
+export const BlockTypeSchema = z.enum([
+  'text',
+  'bullet',
+  'example',
+  'vocab',
+  'formula',
+  'question',
+  'cloze',
+]);
+export type BlockType = z.infer<typeof BlockTypeSchema>;
+
+export const BlockSchema = z.object({
+  id: z.string(),
+  type: BlockTypeSchema.default('text'),
+  content: z.string().default(''),
+  indent: z.number().int().min(0).max(4).optional(),
+  translation: z.string().optional(),
+  vocab: VocabRowsSchema.optional(),
+  example: z.object({
+    sentence: z.string(),
+    translation: z.string().optional(),
+  }).optional(),
+  formula: z.object({
+    latex: z.string(),
+    variables: z.array(z.object({ name: z.string(), desc: z.string() })).optional(),
+    isVerified: z.boolean().optional(),
+  }).optional(),
+  question: z.object({
+    front: z.string(),
+    back: z.string(),
+  }).optional(),
+  variables: z.array(z.object({ name: z.string(), desc: z.string() })).optional(),
+  isCard: z.boolean().optional(),
+  box: z.number().optional(),
+  isAiGenerated: z.boolean().optional(),
+  aiSuggested: z.boolean().optional(),
+});
+export type Block = z.infer<typeof BlockSchema>;
+
 export const NodePageSchema = z.object({
   id: z.string(),
   mapId: z.string(),
@@ -31,6 +70,7 @@ export const NodePageSchema = z.object({
   lang: LanguageCodeSchema.default('de'),
   summary: z.string().optional().default(''),
   content: z.string().optional().default(''), // Full markdown note page
+  blocks: z.array(BlockSchema).optional().default([]),
   rows: VocabRowsSchema.optional(),
   flashcards: z.array(FlashcardSchema).optional().default([]),
   tags: z.array(z.string()).optional().default([]),

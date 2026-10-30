@@ -54,6 +54,7 @@ async function initializeServer() {
           lang: n.lang,
           summary: n.desc || '',
           content: n.desc || '',
+          blocks: [],
           rows: n.rows,
           flashcards: [],
           tags: n.foot || [],

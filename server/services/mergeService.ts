@@ -194,6 +194,7 @@ export function mergeExtractedNodes(
       lang: raw.lang,
       summary: raw.summary || '',
       content: raw.content || '',
+      blocks: [],
       rows: raw.rows,
       flashcards: [],
       tags: raw.tags || [],

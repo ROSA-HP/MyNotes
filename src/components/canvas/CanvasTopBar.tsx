@@ -45,6 +45,8 @@ export const CanvasTopBar: React.FC<CanvasTopBarProps> = ({
   const toggleLang = useMapStore(s => s.toggleLang);
   const toggleTheme = useMapStore(s => s.toggleTheme);
   const toggleSnapToGrid = useMapStore(s => s.toggleSnapToGrid);
+  const viewMode = useMapStore(s => s.viewMode);
+  const setViewMode = useMapStore(s => s.setViewMode);
 
   const [showAutoArrangeModal, setShowAutoArrangeModal] = useState(false);
   const [unpinAllCheck, setUnpinAllCheck] = useState(false);
@@ -97,9 +99,35 @@ export const CanvasTopBar: React.FC<CanvasTopBarProps> = ({
                 : 'text-[var(--mu)] hover:text-[var(--tx)]'
             }`}
           >
-            Canvas Map
+            Canvas
           </button>
         </nav>
+
+        {/* Map / Outline View Toggle */}
+        {currentRoute === 'map' && (
+          <div className="flex items-center bg-[var(--sf2)] rounded-full p-0.5 border border-[var(--bd)] ml-1">
+            <button
+              onClick={() => setViewMode('map')}
+              className={`px-2.5 py-0.5 rounded-full text-xs font-semibold transition-colors ${
+                viewMode === 'map'
+                  ? 'bg-[var(--br)] text-white shadow-sm'
+                  : 'text-[var(--mu)] hover:text-[var(--tx)]'
+              }`}
+            >
+              Map
+            </button>
+            <button
+              onClick={() => setViewMode('outline')}
+              className={`px-2.5 py-0.5 rounded-full text-xs font-semibold transition-colors ${
+                viewMode === 'outline'
+                  ? 'bg-[var(--br)] text-white shadow-sm'
+                  : 'text-[var(--mu)] hover:text-[var(--tx)]'
+              }`}
+            >
+              Outline
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Map Title and Save Status Chip */}

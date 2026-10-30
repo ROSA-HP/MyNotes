@@ -25,6 +25,7 @@ interface MapStoreState {
   dismissedTitles: string[];
 
   // View settings & filtering
+  viewMode: 'map' | 'outline';
   activeLangs: Set<LanguageCode>;
   theme: 'dark' | 'light';
   searchQuery: string;
@@ -34,6 +35,14 @@ interface MapStoreState {
   focusedBranchIds: Set<string> | null;
   collapsedNodeIds: Set<string>;
   snapToGrid: boolean;
+
+  // Page Panel (RemNote style)
+  openNodePageId: string | null;
+  isPageExpanded: boolean;
+
+  // Node Bar Interactive Connect Mode
+  isConnectingMode: boolean;
+  connectingSourceId: string | null;
 
   // History (50 states)
   history: MapStateSnapshot[];
@@ -55,6 +64,7 @@ interface MapStoreState {
   setEdges: (edges: MindLexFlowEdge[]) => void;
   addNode: (node: MindLexFlowNode) => void;
   updateNodeData: (id: string, patch: Partial<MindLexNodeData>) => void;
+  updateNodeBlocks: (id: string, blocks: any[]) => void;
   updateNodePosition: (id: string, pos: { x: number; y: number }, pinned?: boolean) => void;
   deleteNodes: (ids: string[]) => void;
   addEdge: (edge: MindLexFlowEdge) => void;
@@ -74,6 +84,16 @@ interface MapStoreState {
   toggleSnapToGrid: () => void;
   dismissToast: () => void;
   duplicateSelected: () => void;
+
+  // New Phase 3 Actions
+  setViewMode: (mode: 'map' | 'outline') => void;
+  openPage: (nodeId: string, expand?: boolean) => void;
+  closePage: () => void;
+  togglePageExpanded: () => void;
+  startConnecting: (sourceId: string) => void;
+  finishConnecting: (targetId: string, kind?: 'hierarchy' | 'relation') => void;
+  cancelConnecting: () => void;
+  changeNodeParent: (nodeId: string, newParentId: string | null) => void;
 }
 
 let saveTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -86,6 +106,7 @@ export const useMapStore = create<MapStoreState>((set, get) => ({
   saveStatus: 'Saved',
   dismissedTitles: [],
 
+  viewMode: 'map',
   activeLangs: new Set(['en', 'ar', 'de']),
   theme: (typeof window !== 'undefined' && (localStorage.getItem('mindlex_theme') as any)) || 'dark',
   searchQuery: '',
@@ -95,6 +116,11 @@ export const useMapStore = create<MapStoreState>((set, get) => ({
   focusedBranchIds: null,
   collapsedNodeIds: new Set<string>(),
   snapToGrid: true,
+
+  openNodePageId: null,
+  isPageExpanded: false,
+  isConnectingMode: false,
+  connectingSourceId: null,
 
   history: [],
   future: [],
@@ -107,31 +133,63 @@ export const useMapStore = create<MapStoreState>((set, get) => ({
       if (!res.ok) throw new Error('Failed to load map');
       const data = await res.json();
 
-      const flowNodes: MindLexFlowNode[] = (data.nodes || []).map((n: any) => ({
-        id: n.id,
-        type: n.depth === 0 ? 'topic' : 'subtopic',
-        position: n.position || { x: 100, y: 100 },
-        data: {
+      const flowNodes: MindLexFlowNode[] = (data.nodes || []).map((n: any) => {
+        const rawBlocks = n.blocks && Array.isArray(n.blocks) && n.blocks.length > 0 ? n.blocks : [];
+        const initialBlocks = [...rawBlocks];
+        if (initialBlocks.length === 0) {
+          if (n.rows) {
+            initialBlocks.push({
+              id: `blk_v_${n.id}`,
+              type: 'vocab',
+              content: '',
+              vocab: n.rows,
+              isCard: true,
+            });
+          }
+          if (n.content && n.content.trim()) {
+            initialBlocks.push({
+              id: `blk_c_${n.id}`,
+              type: 'text',
+              content: n.content,
+            });
+          } else if (n.summary && n.summary.trim()) {
+            initialBlocks.push({
+              id: `blk_s_${n.id}`,
+              type: 'text',
+              content: n.summary,
+            });
+          }
+        }
+
+        const cardsCount = initialBlocks.filter((b: any) => b.isCard).length || (n.rows ? 1 : 0);
+
+        return {
           id: n.id,
-          mapId: n.mapId,
-          title: n.title,
-          kind: n.kind,
-          lang: n.lang,
-          summary: n.summary,
-          content: n.content,
-          rows: n.rows,
-          flashcards: n.flashcards || [],
-          tags: n.tags || [],
-          parentId: n.parentId,
-          childIds: n.childIds || [],
-          depth: n.depth,
-          order: n.order,
-          pinned: false,
-          blocksCount: n.childIds?.length || 0,
-          cardsCount: n.flashcards?.length || (n.rows ? 1 : 0),
-          dueCount: 1,
-        },
-      }));
+          type: n.depth === 0 ? 'topic' : 'subtopic',
+          position: n.position || { x: 100, y: 100 },
+          data: {
+            id: n.id,
+            mapId: n.mapId,
+            title: n.title,
+            kind: n.kind,
+            lang: n.lang,
+            summary: n.summary,
+            content: n.content,
+            blocks: initialBlocks,
+            rows: n.rows,
+            flashcards: n.flashcards || [],
+            tags: n.tags || [],
+            parentId: n.parentId,
+            childIds: n.childIds || [],
+            depth: n.depth,
+            order: n.order,
+            pinned: false,
+            blocksCount: initialBlocks.length,
+            cardsCount,
+            dueCount: 1,
+          },
+        };
+      });
 
       // Build hierarchy edges from parentId
       const flowEdges: MindLexFlowEdge[] = [];
@@ -555,5 +613,149 @@ export const useMapStore = create<MapStoreState>((set, get) => ({
     };
 
     get().addNode(duplicatedNode);
+  },
+
+  updateNodeBlocks: (id, blocks) => {
+    const { nodes } = get();
+    const targetNode = nodes.find(n => n.id === id);
+    if (!targetNode) return;
+
+    const cardsCount = blocks.filter((b: any) => b.isCard).length;
+    get().updateNodeData(id, {
+      blocks,
+      blocksCount: blocks.length,
+      cardsCount,
+    });
+
+    // Debounced PUT of the page to /api/maps/:mapId/nodes/:nodeId
+    const mapId = targetNode.data.mapId;
+    if (mapId) {
+      fetch(`/api/maps/${mapId}/nodes/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          blocks,
+          summary: targetNode.data.summary,
+          content: targetNode.data.content,
+        }),
+      }).catch(console.warn);
+    }
+  },
+
+  setViewMode: (mode) => {
+    set({ viewMode: mode });
+  },
+
+  openPage: (nodeId, expand = false) => {
+    set({
+      openNodePageId: nodeId,
+      selectedNodeId: nodeId,
+      isPageExpanded: expand,
+    });
+  },
+
+  closePage: () => {
+    set({
+      openNodePageId: null,
+      isPageExpanded: false,
+    });
+  },
+
+  togglePageExpanded: () => {
+    set(s => ({ isPageExpanded: !s.isPageExpanded }));
+  },
+
+  startConnecting: (sourceId) => {
+    set({
+      isConnectingMode: true,
+      connectingSourceId: sourceId,
+      toast: {
+        message: 'Click another star node to connect',
+        actionLabel: 'Cancel',
+        onAction: () => get().cancelConnecting(),
+      },
+    });
+  },
+
+  finishConnecting: (targetId, kind = 'relation') => {
+    const { connectingSourceId, edges, addEdge } = get();
+    if (!connectingSourceId || connectingSourceId === targetId) {
+      set({ isConnectingMode: false, connectingSourceId: null });
+      return;
+    }
+
+    if (kind === 'hierarchy') {
+      addEdge({
+        id: `e_${connectingSourceId}_${targetId}`,
+        source: connectingSourceId,
+        target: targetId,
+        type: 'hierarchy',
+        data: { childLang: 'de', isNew: true },
+      });
+    } else {
+      addEdge({
+        id: `rel_${connectingSourceId}_${targetId}_${Date.now()}`,
+        source: connectingSourceId,
+        target: targetId,
+        type: 'relation',
+        data: { relationType: 'related', label: 'related', direction: 'forward' },
+      });
+    }
+
+    set({
+      isConnectingMode: false,
+      connectingSourceId: null,
+      toast: { message: 'Link connected successfully!' },
+    });
+  },
+
+  cancelConnecting: () => {
+    set({
+      isConnectingMode: false,
+      connectingSourceId: null,
+      toast: null,
+    });
+  },
+
+  changeNodeParent: (nodeId, newParentId) => {
+    const { nodes, edges, history } = get();
+    const node = nodes.find(n => n.id === nodeId);
+    if (!node || node.data.parentId === newParentId) return;
+
+    set({
+      history: [...history.slice(-49), { nodes, edges }],
+      future: [],
+    });
+
+    // Remove old hierarchy edge targeting nodeId
+    const filteredEdges = edges.filter(
+      e => !(e.target === nodeId && (e.type === 'hierarchy' || !e.type))
+    );
+
+    const nextEdges = [...filteredEdges];
+    if (newParentId) {
+      nextEdges.push({
+        id: `e_${newParentId}_${nodeId}`,
+        source: newParentId,
+        target: nodeId,
+        type: 'hierarchy',
+        data: { childLang: node.data.lang || 'de' },
+      });
+    }
+
+    const updatedNodes = nodes.map(n =>
+      n.id === nodeId
+        ? {
+            ...n,
+            data: {
+              ...n.data,
+              parentId: newParentId,
+            },
+          }
+        : n
+    );
+
+    set({ nodes: updatedNodes, edges: nextEdges });
+    get().saveMapDebounced();
   },
 }));

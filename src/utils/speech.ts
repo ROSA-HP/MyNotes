@@ -1,34 +1,31 @@
-const SPEECH_CODES: Record<string, string> = {
-  de: 'de-DE',
-  en: 'en-US',
-  ar: 'ar-SA',
-};
-
-export function speak(text: string, lang: string): void {
+// Web Speech API utility for MindLex
+export function speakText(text: string, lang: 'de' | 'en' | 'ar' | string) {
   if (typeof window === 'undefined' || !window.speechSynthesis) {
-    console.warn('Speech synthesis not supported in this browser.');
+    console.warn('Web Speech API is not supported in this browser.');
     return;
   }
 
-  try {
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = SPEECH_CODES[lang] || 'en-US';
-    utterance.rate = 0.92;
-    utterance.pitch = 1.0;
+  // Cancel any active speech
+  window.speechSynthesis.cancel();
 
-    // Pick best matching voice if available
-    const voices = window.speechSynthesis.getVoices();
-    if (voices && voices.length > 0) {
-      const targetLang = SPEECH_CODES[lang] || lang;
-      const matched = voices.find(v => v.lang.startsWith(targetLang.split('-')[0]));
-      if (matched) {
-        utterance.voice = matched;
-      }
-    }
+  const utterance = new SpeechSynthesisUtterance(text);
+  
+  let targetLang = 'en-US';
+  if (lang === 'de' || lang === 'de-DE') targetLang = 'de-DE';
+  else if (lang === 'ar' || lang === 'ar-SA') targetLang = 'ar-SA';
+  else if (lang === 'en' || lang === 'en-US') targetLang = 'en-US';
 
-    window.speechSynthesis.speak(utterance);
-  } catch (err) {
-    console.error('Failed to trigger speech synthesis:', err);
+  utterance.lang = targetLang;
+  utterance.rate = 0.95; // Slightly measured for clear language learning
+
+  // Try to pick a natural voice if available
+  const voices = window.speechSynthesis.getVoices();
+  const matchedVoice = voices.find(v => v.lang.startsWith(targetLang.slice(0, 2)));
+  if (matchedVoice) {
+    utterance.voice = matchedVoice;
   }
+
+  window.speechSynthesis.speak(utterance);
 }
+
+export const speak = speakText;

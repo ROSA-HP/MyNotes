@@ -70,6 +70,10 @@ const InnerCanvas: React.FC<MindLexCanvasProps> = ({
   const setFocusedBranch = useMapStore(s => s.setFocusedBranch);
   const duplicateSelected = useMapStore(s => s.duplicateSelected);
   const autoArrange = useMapStore(s => s.autoArrange);
+  const openPage = useMapStore(s => s.openPage);
+  const closePage = useMapStore(s => s.closePage);
+  const isConnectingMode = useMapStore(s => s.isConnectingMode);
+  const finishConnecting = useMapStore(s => s.finishConnecting);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(storeNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(storeEdges);
@@ -319,6 +323,20 @@ const InnerCanvas: React.FC<MindLexCanvasProps> = ({
         return;
       }
 
+      // Open Page: key O or Space when a node is selected
+      if ((e.key.toLowerCase() === 'o' || e.key === ' ') && selectedNodeId) {
+        e.preventDefault();
+        openPage(selectedNodeId);
+        return;
+      }
+
+      // Close Page / Cancel connecting: Escape
+      if (e.key === 'Escape') {
+        closePage();
+        if (isConnectingMode) useMapStore.getState().cancelConnecting();
+        return;
+      }
+
       // Add child: Tab
       if (e.key === 'Tab' && selectedNodeId) {
         e.preventDefault();
@@ -490,9 +508,14 @@ const InnerCanvas: React.FC<MindLexCanvasProps> = ({
         onPaneClick={handleCanvasClick}
         onDoubleClick={handleCanvasDoubleClick}
         onPaneContextMenu={handlePaneContextMenu}
-        onNodeContextMenu={handleNodeContextMenu}
-        onEdgeContextMenu={handleEdgeContextMenu}
-        onNodeClick={(_, n) => selectNode(n.id)}
+        onNodeClick={(_, n) => {
+          if (isConnectingMode) {
+            finishConnecting(n.id);
+          } else {
+            selectNode(n.id);
+          }
+        }}
+        onNodeDoubleClick={(_, n) => openPage(n.id)}
         onEdgeClick={(_, e) => selectEdge(e.id)}
         connectionMode={ConnectionMode.Loose} // Any node can connect to ANY node!
         snapToGrid={snapToGrid}

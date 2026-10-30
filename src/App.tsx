@@ -12,6 +12,9 @@ import { StudyModal } from './components/StudyModal';
 import { ExportModal } from './components/ExportModal';
 import { MapsDirectoryModal } from './components/MapsDirectoryModal';
 import { Toast } from './components/Toast';
+import { BottomNodeBar } from './components/canvas/BottomNodeBar';
+import { NodePagePanel } from './components/page/NodePagePanel';
+import { OutlineView } from './components/outline/OutlineView';
 import { MindNode, NodeKind, LanguageCode } from './types';
 
 export default function App() {
@@ -33,6 +36,8 @@ export default function App() {
   const deleteNodes = useMapStore(s => s.deleteNodes);
   const dismissToast = useMapStore(s => s.dismissToast);
   const theme = useMapStore(s => s.theme);
+  const viewMode = useMapStore(s => s.viewMode);
+  const selectedNodeId = useMapStore(s => s.selectedNodeId);
 
   // Placement mode: 'none' | 'topic' | 'subtopic'
   const [placementMode, setPlacementMode] = useState<'none' | 'topic' | 'subtopic'>('none');
@@ -82,14 +87,27 @@ export default function App() {
     : null;
 
   // Selected or anchor node for composer
-  const selectedNode = nodes.find(n => n.id === useMapStore.getState().selectedNodeId) || nodes[0];
+  const selectedNodeObj = selectedNodeId ? nodes.find(n => n.id === selectedNodeId) : null;
+  const selectedNodeForComposer: MindNode | null = selectedNodeObj
+    ? {
+        id: selectedNodeObj.id,
+        kind: (selectedNodeObj.data?.kind as NodeKind) || 'concept',
+        lang: (selectedNodeObj.data?.lang as LanguageCode) || 'de',
+        x: selectedNodeObj.position?.x || 100,
+        y: selectedNodeObj.position?.y || 100,
+        label: selectedNodeObj.data?.title || 'Anchor',
+        desc: selectedNodeObj.data?.summary,
+        rows: selectedNodeObj.data?.rows,
+      }
+    : null;
+
   const defaultAnchorNode: MindNode = {
-    id: selectedNode?.id || 'root',
-    kind: (selectedNode?.data?.kind as NodeKind) || 'topic',
-    lang: (selectedNode?.data?.lang as LanguageCode) || 'de',
-    x: selectedNode?.position?.x || 100,
-    y: selectedNode?.position?.y || 100,
-    label: selectedNode?.data?.title || 'Anchor',
+    id: selectedNodeObj?.id || nodes[0]?.id || 'root',
+    kind: (selectedNodeObj?.data?.kind as NodeKind) || 'topic',
+    lang: (selectedNodeObj?.data?.lang as LanguageCode) || 'de',
+    x: selectedNodeObj?.position?.x || 100,
+    y: selectedNodeObj?.position?.y || 100,
+    label: selectedNodeObj?.data?.title || 'Anchor',
   };
 
   // Convert nodes for Study Modal
@@ -140,60 +158,72 @@ export default function App() {
         />
       )}
 
-      {/* Route: /map/:id React Flow Canvas */}
+      {/* Route: /map/:id React Flow Canvas or Outline View */}
       {currentRoute === 'map' && (
         <>
-          <MindLexCanvas
-            placementMode={placementMode}
-            onClearPlacementMode={() => setPlacementMode('none')}
-            onEditNodeDetails={(id) => setEditingNodeId(id)}
-          />
+          {viewMode === 'outline' ? (
+            <OutlineView />
+          ) : (
+            <>
+              <MindLexCanvas
+                placementMode={placementMode}
+                onClearPlacementMode={() => setPlacementMode('none')}
+                onEditNodeDetails={(id) => setEditingNodeId(id)}
+              />
 
-          {/* Empty-Map First-Run State */}
-          {isFirstRunEmptyMap && !isLoading && (
-            <EmptyMapFirstRun
-              rootTitle={map?.title || 'German Verbs'}
-              onOpenComposer={() => setIsComposerOpen(true)}
-              onAddFirstChild={() => {
-                const root = nodes[0];
-                const newId = `node_${Date.now()}`;
-                addNode({
-                  id: newId,
-                  type: 'subtopic',
-                  position: { x: (root?.position.x || 100) + 360, y: (root?.position.y || 100) + 60 },
-                  data: {
-                    id: newId,
-                    mapId: map?.id || 'default_map',
-                    title: 'Core Concept',
-                    kind: 'concept',
-                    lang: 'de',
-                    parentId: root?.id || null,
-                    pinned: true,
-                  },
-                });
-                if (root) {
-                  addEdge({
-                    id: `e_${root.id}_${newId}`,
-                    source: root.id,
-                    target: newId,
-                    type: 'hierarchy',
-                    data: { childLang: 'de', isNew: true },
-                  });
-                }
-              }}
-            />
+              {/* Empty-Map First-Run State */}
+              {isFirstRunEmptyMap && !isLoading && (
+                <EmptyMapFirstRun
+                  rootTitle={map?.title || 'German Verbs'}
+                  onOpenComposer={() => setIsComposerOpen(true)}
+                  onAddFirstChild={() => {
+                    const root = nodes[0];
+                    const newId = `node_${Date.now()}`;
+                    addNode({
+                      id: newId,
+                      type: 'subtopic',
+                      position: { x: (root?.position.x || 100) + 360, y: (root?.position.y || 100) + 60 },
+                      data: {
+                        id: newId,
+                        mapId: map?.id || 'default_map',
+                        title: 'Core Concept',
+                        kind: 'concept',
+                        lang: 'de',
+                        parentId: root?.id || null,
+                        pinned: true,
+                      },
+                    });
+                    if (root) {
+                      addEdge({
+                        id: `e_${root.id}_${newId}`,
+                        source: root.id,
+                        target: newId,
+                        type: 'hierarchy',
+                        data: { childLang: 'de', isNew: true },
+                      });
+                    }
+                  }}
+                />
+              )}
+            </>
           )}
+
+          {/* Bottom Node Bar (Slides up when single node is selected) */}
+          <BottomNodeBar />
+
+          {/* RemNote Style Page Panel (Slides in from right) */}
+          <NodePagePanel />
 
           {/* AI Note Synthesizer Dock */}
           <NoteComposerDock
             isOpen={isComposerOpen}
             onOpen={() => setIsComposerOpen(true)}
             onClose={() => setIsComposerOpen(false)}
-            selectedNode={defaultAnchorNode}
+            selectedNode={selectedNodeForComposer}
             defaultAnchorNode={defaultAnchorNode}
             onNodesSynthesized={(newNodes, parentId) => {
-              const startX = (selectedNode?.position.x || 100) + 360;
-              const startY = selectedNode?.position.y || 100;
+              const startX = ((selectedNodeObj || nodes[0])?.position.x || 100) + 360;
+              const startY = (selectedNodeObj || nodes[0])?.position.y || 100;
 
               newNodes.forEach((n, idx) => {
                 addNode({

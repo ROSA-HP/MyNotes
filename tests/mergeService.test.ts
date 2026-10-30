@@ -20,6 +20,7 @@ describe('Merge Service - Master Specification Compliance', () => {
       lang: 'de',
       summary: 'Root Topic',
       content: 'Root content',
+      blocks: [],
       flashcards: [],
       tags: ['root'],
       parentId: null,

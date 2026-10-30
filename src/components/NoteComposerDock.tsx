@@ -103,10 +103,30 @@ export const NoteComposerDock: React.FC<NoteComposerDockProps> = ({
 
   const anchorLabel = anchor.rows?.de || anchor.rows?.en || anchor.label || 'Root Star';
 
-  return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-20 transition-all duration-300">
-      {!isOpen ? (
-        /* Collapsed Dock Pill */
+  const isNodeSelected = !!selectedNode;
+
+  if (!isOpen) {
+    if (isNodeSelected) {
+      return (
+        <button
+          onClick={onOpen}
+          id="pill-round"
+          className="fixed right-6 bottom-6 z-20 flex items-center gap-1.5 px-3.5 py-2.5 rounded-full backdrop-blur-xl border shadow-2xl transition-all duration-300 hover:scale-105 font-bold text-xs text-white anim-bl"
+          style={{
+            backgroundColor: 'var(--br)',
+            borderColor: 'var(--bd)',
+            boxShadow: '0 0 20px -2px var(--br)',
+          }}
+          title="Synthesize notes with Gemini"
+        >
+          <Sparkles size={14} />
+          <span>+ Notes</span>
+        </button>
+      );
+    }
+
+    return (
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-20 transition-all duration-300">
         <button
           onClick={onOpen}
           id="pill"
@@ -131,15 +151,19 @@ export const NoteComposerDock: React.FC<NoteComposerDockProps> = ({
             <span>Add notes</span>
           </span>
         </button>
-      ) : (
-        /* Expanded Note Composer Modal */
-        <div
-          className="w-[460px] max-w-[94vw] p-4.5 rounded-3xl backdrop-blur-xl border shadow-2xl flex flex-col gap-3 anim-bl"
-          style={{
-            backgroundColor: 'var(--gl)',
-            borderColor: 'var(--bd)',
-          }}
-        >
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 transition-all duration-300">
+      <div
+        className="w-[460px] max-w-[94vw] p-4.5 rounded-3xl backdrop-blur-xl border shadow-2xl flex flex-col gap-3 anim-bl"
+        style={{
+          backgroundColor: 'var(--gl)',
+          borderColor: 'var(--bd)',
+        }}
+      >
           {/* Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -281,7 +305,6 @@ export const NoteComposerDock: React.FC<NoteComposerDockProps> = ({
             <span>{isProcessing ? 'Synthesizing...' : 'Add to map ✨'}</span>
           </button>
         </div>
-      )}
     </div>
   );
 };

@@ -30,6 +30,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       lang: req.body.lang || 'de',
       summary: 'Central anchor star of this constellation map',
       content: `# ${title}\n\nAnchor topic for multilingual notes and concepts.`,
+      blocks: [],
       flashcards: [],
       tags: ['root'],
       parentId: null,
@@ -179,6 +180,7 @@ router.post('/:id/nodes', async (req: Request, res: Response, next: NextFunction
       lang: req.body.lang || (parentNode?.lang || 'de'),
       summary: req.body.summary || '',
       content: req.body.content || '',
+      blocks: req.body.blocks || [],
       rows: req.body.rows,
       flashcards: req.body.flashcards || [],
       tags: req.body.tags || [],
@@ -222,8 +224,7 @@ router.get('/:id/nodes/:nodeId', async (req: Request, res: Response, next: NextF
   }
 });
 
-// PATCH update node
-router.patch('/:id/nodes/:nodeId', async (req: Request, res: Response, next: NextFunction) => {
+const updateNodeHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const node = await dbStore.getNode(req.params.nodeId);
     if (!node || node.mapId !== req.params.id) {
@@ -237,6 +238,7 @@ router.patch('/:id/nodes/:nodeId', async (req: Request, res: Response, next: Nex
       lang: req.body.lang !== undefined ? req.body.lang : node.lang,
       summary: req.body.summary !== undefined ? req.body.summary : node.summary,
       content: req.body.content !== undefined ? req.body.content : node.content,
+      blocks: req.body.blocks !== undefined ? req.body.blocks : node.blocks,
       rows: req.body.rows !== undefined ? req.body.rows : node.rows,
       tags: req.body.tags !== undefined ? req.body.tags : node.tags,
       position: req.body.position !== undefined ? req.body.position : node.position,
@@ -250,7 +252,10 @@ router.patch('/:id/nodes/:nodeId', async (req: Request, res: Response, next: Nex
   } catch (err) {
     next(err);
   }
-});
+};
+
+router.patch('/:id/nodes/:nodeId', updateNodeHandler);
+router.put('/:id/nodes/:nodeId', updateNodeHandler);
 
 // DELETE node
 router.delete('/:id/nodes/:nodeId', async (req: Request, res: Response, next: NextFunction) => {
